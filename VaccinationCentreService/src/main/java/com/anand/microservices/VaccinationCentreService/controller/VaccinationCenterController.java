@@ -4,6 +4,7 @@ import com.anand.microservices.VaccinationCentreService.entity.VaccinationCenter
 import com.anand.microservices.VaccinationCentreService.model.Citizen;
 import com.anand.microservices.VaccinationCentreService.model.ReqRes;
 import com.anand.microservices.VaccinationCentreService.repository.CenterRepo;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.LockModeType;
 import jakarta.transaction.Transactional;
@@ -40,6 +41,7 @@ public class VaccinationCenterController {
 
 
     @GetMapping(path = "/id/{id}",produces = MediaType.APPLICATION_JSON_VALUE)
+    @CircuitBreaker(name = "externalServiceCB", fallbackMethod = "handleCitizenDowntime")
     public ResponseEntity<ReqRes> getDetailsByVaccinationCenterId(@PathVariable Integer id){
         ReqRes response = new ReqRes();
         VaccinationCenter center = centerRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Not found"));
@@ -57,6 +59,13 @@ public class VaccinationCenterController {
         System.out.println(listOfCitizen);
         response.setCitizens(listOfCitizen);
         System.out.println(response);
+        return new ResponseEntity<ReqRes>(response,HttpStatus.OK);
+    }
+
+    public ResponseEntity<ReqRes> handleCitizenDowntime(@PathVariable Integer id, Throwable throwable) {
+        ReqRes response = new ReqRes();
+        VaccinationCenter center = centerRepo.findById(id).orElseThrow(() -> new EntityNotFoundException("Not found"));
+        response.setCenter(center);
         return new ResponseEntity<ReqRes>(response,HttpStatus.OK);
     }
 
